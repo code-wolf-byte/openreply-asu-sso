@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db/client";
 import { normalizeInvitationEmail } from "@/lib/workspace-invitations";
+import {
+  ACTIVE_WORKSPACE_COOKIE,
+  getActiveWorkspaceCookieOptions,
+} from "@/lib/active-workspace";
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -71,11 +75,19 @@ export async function POST(request: NextRequest) {
     }),
   ]);
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     success: true,
     data: {
       workspaceName: invitation.workspace.name,
     },
   });
+  // Land the user in the workspace they just joined rather than whichever
+  // one they already had.
+  response.cookies.set(
+    ACTIVE_WORKSPACE_COOKIE,
+    invitation.workspaceId,
+    getActiveWorkspaceCookieOptions()
+  );
+  return response;
 }
 

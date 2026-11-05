@@ -8,9 +8,14 @@ import {
   normalizeInvitationEmail,
 } from "@/lib/workspace-invitations";
 import {
+  canInviteMembers,
   canManageWorkspace,
   getCurrentWorkspaceContext,
+  type WorkspaceContext,
 } from "@/lib/workspace-access";
+
+const INVITE_FORBIDDEN =
+  "Only the person who connected an Instagram account can invite members";
 
 const inviteSchema = z.object({
   email: z.string().email(),
@@ -27,11 +32,9 @@ const deleteSchema = z.object({
   invitationId: z.string().min(1).optional(),
 });
 
-async function getMemberPayload(
-  workspaceId: string,
-  currentUserRole?: "OWNER" | "ADMIN" | "MEMBER"
-) {
-  const [members, invitations] = await Promise.all([
+async function getMemberPayload(context: WorkspaceContext) {
+  const { workspaceId } = context;
+  const [members, invitations, canInvite] = await Promise.all([
     prisma.workspaceMember.findMany({
       where: { workspaceId },
       orderBy: [{ role: "asc" }, { createdAt: "asc" }],
@@ -60,10 +63,12 @@ async function getMemberPayload(
         createdAt: true,
       },
     }),
+    canInviteMembers(context),
   ]);
 
   return {
-    ...(currentUserRole ? { currentUserRole } : {}),
+    currentUserRole: context.role,
+    canInvite,
     members,
     invitations: invitations.map((invitation) => ({
       ...invitation,
@@ -84,7 +89,7 @@ export async function GET() {
   return NextResponse.json({
     success: true,
     data: {
-      ...(await getMemberPayload(context.workspaceId, context.role)),
+      ...(await getMemberPayload(context)),
     },
   });
 }
@@ -97,9 +102,9 @@ export async function POST(request: NextRequest) {
       { status: 401 }
     );
   }
-  if (!canManageWorkspace(context.role)) {
+  if (!(await canInviteMembers(context))) {
     return NextResponse.json(
-      { success: false, error: "Only owners and admins can invite members" },
+      { success: false, error: INVITE_FORBIDDEN },
       { status: 403 }
     );
   }
@@ -164,7 +169,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    data: await getMemberPayload(context.workspaceId, context.role),
+    data: await getMemberPayload(context),
   });
 }
 
@@ -208,7 +213,7 @@ export async function PATCH(request: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    data: await getMemberPayload(context.workspaceId, context.role),
+    data: await getMemberPayload(context),
   });
 }
 
@@ -232,6 +237,13 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json(
       { success: false, error: "Missing member or invitation ID" },
       { status: 400 }
+    );
+  }
+  // Checked before anything is deleted, since one request can carry both IDs.
+  if (parsed.data.invitationId && !(await canInviteMembers(context))) {
+    return NextResponse.json(
+      { success: false, error: INVITE_FORBIDDEN },
+      { status: 403 }
     );
   }
 
@@ -262,6 +274,6 @@ export async function DELETE(request: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    data: await getMemberPayload(context.workspaceId, context.role),
+    data: await getMemberPayload(context),
   });
 }

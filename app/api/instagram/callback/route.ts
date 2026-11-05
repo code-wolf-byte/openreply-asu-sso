@@ -92,12 +92,15 @@ export async function GET(request: NextRequest) {
     };
     const existing = await prisma.instagramAccount.findUnique({ where: { instagramId } });
     if (existing) {
+      // A reconnect refreshes the token but keeps the original connector, so
+      // invite rights do not move to whichever admin reconnected last.
       const updated = await prisma.instagramAccount.updateMany({
-        where: { id: existing.id, workspaceId: state.workspaceId, provider: 'META' }, data,
+        where: { id: existing.id, workspaceId: state.workspaceId, provider: 'META' },
+        data: { ...data, ...(existing.connectedByUserId ? {} : { connectedByUserId: session.user.id }) },
       });
       if (!updated.count) return NextResponse.redirect(`${baseUrl}/settings?instagram=already_connected`);
     } else {
-      await prisma.instagramAccount.create({ data: { ...data, workspaceId: state.workspaceId, instagramId, provider: 'META' } });
+      await prisma.instagramAccount.create({ data: { ...data, workspaceId: state.workspaceId, instagramId, provider: 'META', connectedByUserId: session.user.id } });
     }
 
     return NextResponse.redirect(`${baseUrl}/dashboard?connected=true`);

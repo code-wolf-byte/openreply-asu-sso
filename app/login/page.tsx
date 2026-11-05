@@ -3,6 +3,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { getCampaignTemplate } from "@/lib/templates/campaign-templates";
 import { DemoNotice } from "@/components/demo-notice";
 import { isPublicDemoHost } from "@/lib/env";
+import { isCasEnabled } from "@/lib/cas";
 
 const GITHUB_URL = "https://github.com/diwenne/openreply";
 const SETUP_DOCS_URL = `${GITHUB_URL}/blob/main/docs/setup.md`;
@@ -22,17 +23,18 @@ export default async function LoginPage({
     checkEmail?: string;
     callbackUrl?: string;
     template?: string;
+    error?: string;
   }>;
 }) {
   const { t } = await getI18n();
   if (await isPublicDemoHost()) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6">
+      <div className="flex items-center justify-center px-6 py-16">
         <div className="w-full max-w-md text-center">
           <h1 className="text-2xl font-semibold text-foreground">
             OpenReply
           </h1>
-          <div className="panel rounded p-8 mt-8 shadow-black/40">
+          <div className="panel rounded p-8 mt-8">
             <h2 className="text-lg font-semibold text-foreground">
               {t("Sign-in is off on this demo")}
             </h2>
@@ -43,7 +45,7 @@ export default async function LoginPage({
               href={SETUP_DOCS_URL}
               target="_blank"
               rel="noreferrer"
-              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded bg-accent px-6 py-3.5 text-sm font-semibold text-white shadow-indigo-500/25 transition-all hover:shadow-indigo-500/30"
+              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded bg-accent px-6 py-3.5 text-sm font-semibold text-white transition-all"
             >
               {t("Clone it yourself")} <span aria-hidden="true">↗</span>
             </a>
@@ -60,6 +62,15 @@ export default async function LoginPage({
     ? `/campaigns/new?template=${selectedTemplate.slug}`
     : null;
   const callbackUrl = params.callbackUrl ?? templateCallbackUrl ?? "/dashboard";
+  const casEnabled = isCasEnabled();
+  const casLoginUrl = `/api/auth/cas/login?${new URLSearchParams({ callbackUrl })}`;
+  const errorMessage = params.error
+    ? params.error === "AccessDenied"
+      ? t("This account is not allowed to sign in to this instance.")
+      : params.error.startsWith("Cas")
+        ? t("ASU sign-in failed. Please try again.")
+        : t("Sign-in failed. Please try again.")
+    : null;
 
   async function sendMagicLink(formData: FormData) {
     "use server";
@@ -70,7 +81,7 @@ export default async function LoginPage({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
+    <div className="flex items-center justify-center px-6 py-16">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-semibold text-foreground">
@@ -85,7 +96,7 @@ export default async function LoginPage({
 
         <DemoNotice variant="panel" />
 
-        <div className="panel rounded p-8 shadow-black/40">
+        <div className="panel rounded p-8">
           {selectedTemplate && !checkEmail && (
             <div className="mb-5 border border-accent/20 bg-accent/10 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-accent">
@@ -95,6 +106,28 @@ export default async function LoginPage({
                 {selectedTemplate.title}
               </p>
             </div>
+          )}
+
+          {errorMessage && !checkEmail && (
+            <p role="alert" className="mb-5 rounded border border-error/20 bg-error/10 p-3 text-sm text-error">
+              {errorMessage}
+            </p>
+          )}
+
+          {casEnabled && !checkEmail && (
+            <>
+              <a
+                href={casLoginUrl}
+                className="w-full inline-flex items-center justify-center gap-2 rounded bg-accent px-6 py-3.5 text-sm font-semibold text-white transition-all"
+              >
+                {t("Sign in with ASU")}
+              </a>
+              <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-wide text-muted">
+                <span className="h-px flex-1 bg-border" />
+                {t("or")}
+                <span className="h-px flex-1 bg-border" />
+              </div>
+            </>
           )}
 
           {checkEmail ? (
@@ -126,7 +159,7 @@ export default async function LoginPage({
 
               <button
                 type="submit"
-                className="w-full inline-flex items-center justify-center gap-2 rounded bg-accent px-6 py-3.5 text-sm font-semibold text-white shadow-indigo-500/25 transition-all hover:shadow-indigo-500/30"
+                className="w-full inline-flex items-center justify-center gap-2 rounded bg-accent px-6 py-3.5 text-sm font-semibold text-white transition-all"
               >
                 {t("Email me a magic link")}
               </button>

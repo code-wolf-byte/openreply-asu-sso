@@ -468,5 +468,21 @@
   "{name} Campaign Report": "{name} 活動報表",
   "{type} post": "{type} 貼文",
   "”": "」",
-  "← Campaigns": "← 返回活動列表"
+  "← Campaigns": "← 返回活動列表",
+  "Sign in with ASU": "使用 ASU 帳號登入",
+  "or": "或",
+  "ASU sign-in failed. Please try again.": "ASU 登入失敗，請再試一次。",
+  "Sign-in failed. Please try again.": "登入失敗，請再試一次。",
+  "This account is not allowed to sign in to this instance.": "此帳號不允許登入這個執行個體。",
+  "Only the person who connected an Instagram account can invite members.": "只有連接 Instagram 帳號的人可以邀請成員。",
+  "No access - OpenReply": "無法存取 - OpenReply",
+  "This OpenReply instance is invite-only.": "此 OpenReply 執行個體僅限受邀者使用。",
+  "You have not been invited yet": "你尚未受到邀請",
+  "This instance is invite-only. Ask the person who manages your team's Instagram account to invite {email}.": "此執行個體僅限受邀者使用。請負責管理團隊 Instagram 帳號的人邀請 {email}。",
+  "your account": "你的帳號",
+  "Sign in with a different account": "使用其他帳號登入",
+  "Could not switch workspace. Please try again.": "無法切換工作區，請再試一次。",
+  "General": "一般",
+  "Messaging": "訊息",
+  "System": "系統"
 }

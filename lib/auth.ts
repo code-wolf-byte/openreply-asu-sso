@@ -5,6 +5,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/db/client";
 import { ensureWorkspaceForUser, getPrimaryWorkspace } from "@/lib/workspace";
 import { isEmailAllowedToSignIn } from "@/lib/env";
+import { readActiveWorkspaceId } from "@/lib/active-workspace";
 
 type AdapterPrismaClient = Parameters<typeof PrismaAdapter>[0];
 
@@ -72,7 +73,8 @@ export async function getCurrentWorkspaceId(): Promise<string | null> {
   const userId = await getCurrentUserId();
   if (!userId) return null;
 
-  const workspace = await getPrimaryWorkspace(userId);
+  const preferredWorkspaceId = await readActiveWorkspaceId();
+  const workspace = await getPrimaryWorkspace(userId, preferredWorkspaceId);
   if (workspace) return workspace.id;
 
   const user = await prisma.user.findUnique({
@@ -81,5 +83,5 @@ export async function getCurrentWorkspaceId(): Promise<string | null> {
   });
 
   const createdWorkspace = await ensureWorkspaceForUser(userId, user?.email);
-  return createdWorkspace.id;
+  return createdWorkspace?.id ?? null;
 }

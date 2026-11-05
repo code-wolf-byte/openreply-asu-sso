@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/client";
+import { canCreateOwnWorkspace } from "@/lib/env";
 import type { Workspace, WorkspaceRole } from "@/app/generated/prisma/client";
 
 function normalizeInviteEmail(email: string) {
@@ -50,15 +51,33 @@ export async function acceptPendingInvitationsForUser(
   }
 }
 
-export async function getWorkspaceMembership(userId: string): Promise<{
+/**
+ * The workspace a user is working in. preferredWorkspaceId comes from the
+ * workspace switcher's cookie and is only honored while the user is still a
+ * member; otherwise, or without one, it is the oldest membership.
+ */
+export async function getWorkspaceMembership(
+  userId: string,
+  preferredWorkspaceId?: string | null
+): Promise<{
   workspace: Workspace;
   role: WorkspaceRole;
 } | null> {
-  const membership = await prisma.workspaceMember.findFirst({
-    where: { userId },
-    include: { workspace: true },
-    orderBy: { createdAt: "asc" },
-  });
+  const preferred = preferredWorkspaceId
+    ? await prisma.workspaceMember.findUnique({
+        where: {
+          workspaceId_userId: { workspaceId: preferredWorkspaceId, userId },
+        },
+        include: { workspace: true },
+      })
+    : null;
+  const membership =
+    preferred ??
+    (await prisma.workspaceMember.findFirst({
+      where: { userId },
+      include: { workspace: true },
+      orderBy: { createdAt: "asc" },
+    }));
 
   if (!membership) return null;
 
@@ -70,14 +89,22 @@ export async function getWorkspaceMembership(userId: string): Promise<{
 
 export async function ensureWorkspaceForUser(
   userId: string,
-  email?: string | null
-): Promise<Workspace> {
+  email?: string | null,
+  preferredWorkspaceId?: string | null
+): Promise<Workspace | null> {
   await acceptPendingInvitationsForUser(userId, email);
 
-  const existingMembership = await getWorkspaceMembership(userId);
+  const existingMembership = await getWorkspaceMembership(
+    userId,
+    preferredWorkspaceId
+  );
   if (existingMembership) {
     return existingMembership.workspace;
   }
+
+  // Invite-only instances never hand an uninvited user a workspace; callers
+  // treat null as "no access".
+  if (!canCreateOwnWorkspace(email)) return null;
 
   const workspaceName = email ? `${email.split("@")[0]}'s workspace` : "My workspace";
 
@@ -95,7 +122,19 @@ export async function ensureWorkspaceForUser(
   });
 }
 
-export async function getPrimaryWorkspace(userId: string): Promise<Workspace | null> {
-  const membership = await getWorkspaceMembership(userId);
+export async function getPrimaryWorkspace(
+  userId: string,
+  preferredWorkspaceId?: string | null
+): Promise<Workspace | null> {
+  const membership = await getWorkspaceMembership(userId, preferredWorkspaceId);
   return membership?.workspace ?? null;
+}
+
+export async function listWorkspacesForUser(userId: string) {
+  const memberships = await prisma.workspaceMember.findMany({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+    select: { role: true, workspace: { select: { id: true, name: true } } },
+  });
+  return memberships.map(({ role, workspace }) => ({ ...workspace, role }));
 }

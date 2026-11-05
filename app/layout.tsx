@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
+// Unity's header/footer styles first, so globals.css can correct the one
+// global rule in them that conflicts with Tailwind.
+import "@asu/unity-bootstrap-theme/dist/css/unity-bootstrap-header-footer.css";
+import "@fortawesome/fontawesome-free/css/all.min.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -29,7 +33,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#18181b",
+  themeColor: "#191919",
   width: "device-width",
   initialScale: 1,
   // Installed on iOS the app owns the full screen, notch included; the safe

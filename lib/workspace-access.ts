@@ -1,7 +1,8 @@
 import type { Workspace, WorkspaceRole } from "@/app/generated/prisma/client";
 import { getCurrentUserId } from "@/lib/auth";
 import { prisma } from "@/lib/db/client";
-import { ensureWorkspaceForUser } from "@/lib/workspace";
+import { readActiveWorkspaceId } from "@/lib/active-workspace";
+import { ensureWorkspaceForUser, getWorkspaceMembership } from "@/lib/workspace";
 
 export type WorkspaceContext = {
   userId: string;
@@ -27,6 +28,21 @@ export function canManageWorkspace(role: WorkspaceRole) {
   return hasWorkspaceRole(role, "ADMIN");
 }
 
+/**
+ * Only an admin or owner who connected one of the workspace's Instagram
+ * accounts can send or revoke invites. The role check stays so a connector
+ * who was later demoted to member cannot invite new admins.
+ */
+export async function canInviteMembers(
+  context: Pick<WorkspaceContext, "userId" | "workspaceId" | "role">
+): Promise<boolean> {
+  if (!canManageWorkspace(context.role)) return false;
+  const connected = await prisma.instagramAccount.count({
+    where: { workspaceId: context.workspaceId, connectedByUserId: context.userId },
+  });
+  return connected > 0;
+}
+
 export function canManageBilling(role: WorkspaceRole) {
   return role === "OWNER";
 }
@@ -35,16 +51,13 @@ export async function getCurrentWorkspaceContext(): Promise<WorkspaceContext | n
   const userId = await getCurrentUserId();
   if (!userId) return null;
 
-  const membership = await prisma.workspaceMember.findFirst({
-    where: { userId },
-    include: { workspace: true },
-    orderBy: { createdAt: "asc" },
-  });
+  const preferredWorkspaceId = await readActiveWorkspaceId();
+  const membership = await getWorkspaceMembership(userId, preferredWorkspaceId);
 
   if (membership) {
     return {
       userId,
-      workspaceId: membership.workspaceId,
+      workspaceId: membership.workspace.id,
       workspace: membership.workspace,
       role: membership.role,
     };
@@ -54,7 +67,11 @@ export async function getCurrentWorkspaceContext(): Promise<WorkspaceContext | n
     where: { id: userId },
     select: { email: true },
   });
+  // Null on an invite-only instance for a user nobody invited, which every
+  // caller already answers with 401.
   const workspace = await ensureWorkspaceForUser(userId, user?.email);
+  if (!workspace) return null;
+
   const createdMembership = await prisma.workspaceMember.findUnique({
     where: {
       workspaceId_userId: {
@@ -71,4 +88,3 @@ export async function getCurrentWorkspaceContext(): Promise<WorkspaceContext | n
     role: createdMembership?.role ?? "OWNER",
   };
 }
-

@@ -1,23 +1,34 @@
 @import "tailwindcss";
 
-/* ManyChat Alternative — Design System
-   Plain and functional. No gradients, glass, glow, or animation. */
+/* ASU Unity palette, matching forklift's asu-unity-react app. The Unity
+   header and footer bring their own styles (see components/asu-chrome.tsx);
+   only their scoped stylesheet is loaded, not the full Bootstrap bundle,
+   whose !important spacing utilities (.p-4 is 2rem there) would override
+   Tailwind's across the app. */
 
 @theme inline {
   --color-background: #ffffff;
-  --color-foreground: #18181b;
-  --color-surface: #f7f7f8;
-  --color-surface-hover: #efeff1;
-  --color-border: #e4e4e7;
-  --color-border-hover: #d4d4d8;
-  --color-muted: #71717a;
-  --color-accent: #f97316;
-  --color-accent-hover: #ea580c;
-  --color-success: #16a34a;
-  --color-error: #dc2626;
-  --color-warning: #d97706;
-  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-foreground: #191919;
+  --color-surface: #fafafa;
+  --color-surface-hover: #e8e8e8;
+  --color-border: #d0d0d0;
+  --color-border-hover: #bfbfbf;
+  --color-muted: #5c5c5c;
+  --color-accent: #8c1d40;
+  --color-accent-hover: #7a1836;
+  --color-gold: #ffc627;
+  --color-success: #446d12;
+  --color-error: #b72a2a;
+  --color-warning: #bd4800;
+  --font-sans: Arial, Helvetica, "Nimbus Sans L", "Liberation Sans", FreeSans, sans-serif;
   --font-mono: ui-monospace, monospace;
+}
+
+/* The Unity header stylesheet sets .text-white to #e8e8e8 !important
+   globally; keep Tailwind's meaning (plain white) for app buttons. Same
+   specificity, so this wins by loading after it in app/layout.tsx. */
+.text-white {
+  color: #ffffff !important;
 }
 
 html {

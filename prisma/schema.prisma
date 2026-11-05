@@ -23,6 +23,7 @@ model User {
   ownedWorkspaces   Workspace[]       @relation("WorkspaceOwner")
   workspaceMembers  WorkspaceMember[]
   sentInvitations   WorkspaceInvitation[] @relation("WorkspaceInvitationsSent")
+  connectedInstagramAccounts InstagramAccount[] @relation("InstagramAccountConnectedBy")
 }
 
 model Account {
@@ -152,16 +153,21 @@ model InstagramAccount {
   accessToken       String
   tokenExpiresAt    DateTime?
   webhookSubscribed Boolean  @default(false)
+  // Who first connected the account. Only these users can invite people to
+  // the workspace (see canInviteMembers in lib/workspace-access.ts).
+  connectedByUserId String?
   connectedAt       DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  connectedBy User?        @relation("InstagramAccountConnectedBy", fields: [connectedByUserId], references: [id], onDelete: SetNull)
   automations Automation[]
   dmLogs      DmLog[]
   linkClicks  LinkClick[]
   followerSnapshots FollowerSnapshot[]
 
   @@index([workspaceId])
+  @@index([connectedByUserId])
 }
 
 /// Daily follower total for one account. Instagram only retains ~30 days of

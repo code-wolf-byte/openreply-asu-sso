@@ -44,14 +44,9 @@ export default function TopBar({
 
   return (
     <header
-      className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 lg:px-8 border-b border-border bg-background"
-      // Installed to the home screen the app starts at the very top of the
-      // display, so without this the title sits under the clock and battery.
-      // The inset is 0 in a browser tab and on desktop.
-      style={{
-        height: "calc(4rem + env(safe-area-inset-top))",
-        paddingTop: "env(safe-area-inset-top)",
-      }}
+      // Sits below the fixed ASU header, which owns the top of the screen
+      // (and the safe-area inset) now.
+      className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 px-4 lg:px-8 border-b border-border bg-background"
     >
       <div className="flex min-w-0 items-center gap-3 sm:gap-4">
         <button

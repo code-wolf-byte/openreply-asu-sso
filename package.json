@@ -12,10 +12,14 @@
     "db:migrate": "prisma migrate deploy",
     "worker": "tsx worker/dm-worker.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "postinstall": "patch-package"
   },
   "dependencies": {
+    "@asu/component-header-footer": "1.4.3",
+    "@asu/unity-bootstrap-theme": "^1.39.4",
     "@auth/prisma-adapter": "^2.11.2",
+    "@fortawesome/fontawesome-free": "^5.15.4",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@vercel/analytics": "^2.0.1",
@@ -40,6 +44,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "^16.2.6",
+    "patch-package": "^8.0.1",
     "prisma": "^7.8.0",
     "tailwindcss": "^4",
     "tsx": "^4.22.1",

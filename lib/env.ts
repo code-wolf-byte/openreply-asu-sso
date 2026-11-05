@@ -96,6 +96,29 @@ export function isEmailAllowedToSignIn(
   return allowed.includes(email.toLowerCase());
 }
 
+function readEmailList(name: string): string[] {
+  return (process.env[name] ?? "")
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/**
+ * Invite-only mode. By default every new account gets its own workspace.
+ * With INVITE_ONLY=true a user only gets in by accepting an invitation, apart
+ * from the addresses in WORKSPACE_CREATOR_EMAILS, who may start a workspace of
+ * their own (someone has to create the first one and connect Instagram).
+ */
+export function isInviteOnly(): boolean {
+  return process.env.INVITE_ONLY?.trim().toLowerCase() === "true";
+}
+
+export function canCreateOwnWorkspace(email: string | null | undefined): boolean {
+  if (!isInviteOnly()) return true;
+  if (!email) return false;
+  return readEmailList("WORKSPACE_CREATOR_EMAILS").includes(email.toLowerCase());
+}
+
 export const serverEnvSchema = z.object({
   NEXTAUTH_URL: z.string().url(),
   NEXTAUTH_SECRET: z.string().min(16),

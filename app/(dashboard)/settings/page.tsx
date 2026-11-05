@@ -4,7 +4,6 @@ import LanguageSwitcher from "@/components/language-switcher";
 import { useI18n } from "@/lib/i18n/provider";
 import { Suspense, useEffect, useState } from "react";
 import type { AccountOption } from "@/components/account-select";
-import { ZernioConnection } from "@/components/zernio-connection";
 import { InstagramConnectNotice } from "@/components/instagram-connect-notice";
 
 interface SettingsData {
@@ -30,6 +29,7 @@ interface SettingsData {
 
 interface WorkspaceMembersData {
   currentUserRole: "OWNER" | "ADMIN" | "MEMBER";
+  canInvite: boolean;
   members: Array<{
     id: string;
     role: "OWNER" | "ADMIN" | "MEMBER";
@@ -131,6 +131,7 @@ export default function SettingsPage() {
   const canManageMembers =
     membersData?.currentUserRole === "OWNER" ||
     membersData?.currentUserRole === "ADMIN";
+  const canInvite = membersData?.canInvite ?? false;
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -147,7 +148,8 @@ export default function SettingsPage() {
         <p className="text-sm text-muted">{t("Saved in this browser. Campaign messages stay unchanged.")}</p>
       </section>
 
-      <ZernioConnection canManage={canManageMembers} />
+      {/* The Zernio connection panel is hidden on this ASU fork, which only
+          connects Instagram through its own Meta app. */}
 
       <section className="panel rounded p-4 sm:p-6">
         <h2 className="text-base font-semibold mb-6">{t("Instagram Connection")}</h2>
@@ -280,14 +282,16 @@ export default function SettingsPage() {
                     >
                       {t("Copy")}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => removeInvitation(invitation.id)}
-                      disabled={busy === `invite:${invitation.id}`}
-                      className="rounded-lg border border-error/20 px-3 py-1.5 text-xs font-medium text-error transition-colors hover:bg-error/10 disabled:opacity-50"
-                    >
-                      {t("Revoke")}
-                    </button>
+                    {canInvite && (
+                      <button
+                        type="button"
+                        onClick={() => removeInvitation(invitation.id)}
+                        disabled={busy === `invite:${invitation.id}`}
+                        className="rounded-lg border border-error/20 px-3 py-1.5 text-xs font-medium text-error transition-colors hover:bg-error/10 disabled:opacity-50"
+                      >
+                        {t("Revoke")}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -295,7 +299,13 @@ export default function SettingsPage() {
           </div>
         ) : null}
 
-        {canManageMembers && (
+        {canManageMembers && !canInvite && (
+          <p className="mt-6 border-t border-border pt-4 text-sm text-muted">
+            {t("Only the person who connected an Instagram account can invite members.")}
+          </p>
+        )}
+
+        {canInvite && (
           <form
             onSubmit={inviteMember}
             className="mt-6 grid gap-3 border-t border-border pt-4 sm:grid-cols-[1fr_140px_auto]"
